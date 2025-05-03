@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-page-favorites">
+<div class="dashboard-container">
+  <h2>Your Favorites ❤️</h2>
+
+  {% if favorites %}
+  <div class="product-grid">
+    {% for item in favorites %}
+    <div class="product-card" id="favorite-{{ item.folder }}">
+      <a href="{{ url_for('main.product_detail', product_name=item.folder) }}">
+        <img src="{{ item.main_image }}" alt="Favorite Product" class="main-product-image">
+      </a>
+
+      <div class="color-swatches">
+        {% set colors_list = item.colors.items() | list %}
+        {% for color, images in colors_list[:8] %}
+          <div class="swatch"
+               style="background-image: url('{{ images[0] }}');">
+          </div>
+        {% endfor %}
+        <div class="favorite-icon" 
+        onclick="toggleFavorite('{{ item.folder }}', this)" 
+        data-favorited="true">  {# Since it's already a favorite on this page #}
+     ❤️
+   </div>
+      </div>
+
+
+      <h3>{{ item.folder }}</h3>
+
+      <!-- ❤️ Heart toggle button -->
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p>You have no favorites yet.</p>
+  {% endif %}
+</div>
+</div>
+<!-- Heart Toggle Script (same as dashboard) -->
+<script>
+function toggleFavorite(folderName, element) {
+  const isFavorited = element.getAttribute('data-favorited') === 'true';
+
+  if (isFavorited) {
+    // Unfavorite
+    fetch('/unfavorite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_name: folderName }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        element.textContent = '🤍';  // Change heart to empty
+        element.setAttribute('data-favorited', 'false');
+        element.classList.add('pop');
+        setTimeout(() => element.classList.remove('pop'), 400);
+
+      }
+    });
+  } else {
+    // Favorite
+    fetch('/favorite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ product_name: folderName }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        element.textContent = '❤️';  // Fill the heart
+        element.setAttribute('data-favorited', 'true');
+        element.classList.add('pop');
+        setTimeout(() => element.classList.remove('pop'), 400);
+      }
+    });
+  }
+}
+</script>
+{% endblock %}

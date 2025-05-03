@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Starbase - Home</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+
+</head>
+<body>
+  {% include 'navbar.html' %}
+
+  
+  <script>
+    function toggleSettingsMenu() {
+      const menu = document.getElementById('settings-menu');
+      menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+    }
+    </script>
+
+  <!-- Main Content -->
+  <div class="tutorial-section">
+    <h2>Welcome to Starbase!</h2>
+  
+    <div class="swiper tutorial-swiper">
+      <div class="swiper-wrapper">
+        
+        <!-- One Slide -->
+        <div class="swiper-slide">
+          <video controls width="100%">
+            <source src="{{ url_for('static', filename='tutorials/register.mp4') }}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <p>Step 1: Register</p>
+        </div>
+  
+        <!-- Another Slide -->
+        <div class="swiper-slide">
+          <video controls width="100%">
+            <source src="{{ url_for('static', filename='tutorials/quiz.mp4') }}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <p>Step 2: Select Style</p>
+        </div>
+  
+        <!-- Another Slide -->
+        <div class="swiper-slide">
+          <video controls width="100%">
+            <source src="{{ url_for('static', filename='tutorials/dashboard.mp4') }}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <p>Step 3: See suggested fits</p>
+        </div>
+
+        <div class="swiper-slide">
+          <video controls width="100%">
+            <source src="{{ url_for('static', filename='tutorials/favorites.mp4') }}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <p>Step 3: Save Favorites</p>
+        </div>
+
+        <div class="swiper-slide">
+          <video controls width="100%">
+            <source src="{{ url_for('static', filename='tutorials/visit_site.mp4') }}" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <p>Step 3: Visit Websites / Change Selections</p>
+        </div>
+  
+      </div>
+  
+      <!-- Navigation buttons -->
+      <div class="swiper-button-next"></div>
+      <div class="swiper-button-prev"></div>
+  
+      <!-- Pagination dots -->
+      <div class="swiper-pagination"></div>
+  
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="loginModal" class="modal">
+    <div class="modal-content">
+        <div class ="modal-header">
+          <h2>Sign In</h2>
+          <span class="close" onclick="closeModal('loginModal')">&times;</span>
+        </div>
+      <form method="POST" action="{{ url_for('main.login') }}">
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Sign In</button>
+      </form>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, msg in messages %}
+        {% if category == 'danger' %}
+          <div class="flash danger">{{ msg }}</div>
+        {% endif %}
+      {% endfor %}
+    {% endwith %}
+      <div class="or-separator">
+        <span>Or</span>
+      </div>
+      <div class="register-prompt">
+        <p>Don't have an account?   <a href="javascript:void(0);" onclick="closeModal('loginModal'); openModal('registerModal')">Register</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Modal -->
+  <div id="registerModal" class="modal">
+    <div class="modal-content">
+        <div class ="modal-header">
+          <h2>Join Starbase</h2>
+          <span class="close" onclick="closeModal('registerModal')">&times;</span>
+        </div>
+      <form method="POST" action="{{ url_for('main.register') }}">
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <button type="submit">Join Starbase</button>
+      </form>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, msg in messages %}
+          {% if category == 'danger' %}
+            <div class="flash danger">{{ msg }}</div>
+          {% endif %}
+        {% endfor %}
+      {% endwith %}
+      <div class="or-separator">
+        <span>Or</span>
+      </div>
+      <div class="register-prompt">
+        <p>Already Have an Account?   <a href="javascript:void(0);" onclick="closeModal('registerModal'); openModal('loginModal')">Sign In</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Script -->
+  <script>
+    function openModal(id) {
+      document.getElementById(id).style.display = "block";
+
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = "none";
+        clearFlashMessages();
+    }
+
+    function clearFlashMessages() {
+        var flashMessages = document.querySelectorAll('.flash');
+        flashMessages.forEach(function(el) {
+            el.remove();  // Remove the flash message after the modal is closed
+        });
+    }
+
+    window.onclick = function(event) {
+      ['loginModal', 'registerModal'].forEach(id => {
+        let modal = document.getElementById(id);
+        if (event.target === modal) {
+          closeModal(id);
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var openModalFlag = "{{ open_modal }}";
+        
+        if (openModalFlag === 'register') {
+            openModal('registerModal');
+        } else if (openModalFlag === 'login') {
+            openModal('loginModal');
+        }
+    });
+
+  </script>
+
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<script>
+  const tutorialSwiper = new Swiper('.tutorial-swiper', {
+    slidesPerView: 1,
+    spaceBetween: 30,
+    loop: false,
+    pagination: {
+      el: '.swiper-pagination',
+      clickable: true,
+    },
+    navigation: {
+      nextEl: '.swiper-button-next',
+      prevEl: '.swiper-button-prev',
+    },
+  });
+  
+</script>
+
+</body>
+</html>

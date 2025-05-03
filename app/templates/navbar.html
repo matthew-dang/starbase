@@ -1,0 +1,36 @@
+<nav class="navbar">
+  <div class="navbar-content">
+    <!-- Center Logo -->
+     {% if current_user.is_authenticated %}
+    <a class="logo" href="{{ url_for('main.dashboard') }}">Starbase</a>
+    <img src="{{ url_for('static', filename='starbase_logo2.png') }}">
+    {% else %}
+    <a class="logo" href="{{ url_for('main.home') }}">Starbase</a>
+    <img src="{{ url_for('static', filename='starbase_logo2.png') }}">
+    {% endif %}
+
+    <!-- Right Side: Settings Icon -->
+    <div class="nav-links">
+      {% if current_user.is_authenticated %}
+        <div class="settings-dropdown">
+          <img src="{{ url_for('static', filename='settings_icon.png') }}" class="settings-icon" onclick="toggleSettingsMenu()">
+          <div id="settings-menu" class="settings-menu">
+            <a href="{{ url_for('main.favorites_page') }}">View Favorites ❤️</a>
+            <a href="{{ url_for('main.quiz') }}">Change Selections</a>
+            <a href="{{ url_for('main.logout') }}">Logout</a>
+          </div>
+        </div>
+      {% else %}
+        <button onclick="openModal('loginModal')">Login</button>
+        <button onclick="openModal('registerModal')">Register</button>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<script>
+  function toggleSettingsMenu() {
+    const menu = document.getElementById('settings-menu');
+    menu.style.display = (menu.style.display === 'flex') ? 'none' : 'flex';
+  }
+  </script>

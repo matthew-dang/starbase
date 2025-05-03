@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-page">
+  <div class="sidebar">
+    <h3>Filter by Color</h3>
+    <div class="filter-group">
+      <label><input type="checkbox" value="black" onchange="applyFilters()"> Black</label>
+      <label><input type="checkbox" value="white" onchange="applyFilters()"> White</label>
+      <label><input type="checkbox" value="beige" onchange="applyFilters()"> Beige</label>
+      <label><input type="checkbox" value="blue" onchange="applyFilters()"> Blue</label>
+      <label><input type="checkbox" value="gray" onchange="applyFilters()"> Gray</label>
+      <label><input type="checkbox" value="green" onchange="applyFilters()"> Green</label>
+      <label><input type="checkbox" value="red" onchange="applyFilters()"> Red</label>
+      <label><input type="checkbox" value="brown" onchange="applyFilters()"> Brown</label>
+    </div>
+  </div>
+
+  <div class="dashboard-container">
+    <h2>The Drop</h2>
+    <div class="product-grid" id="productGrid">
+      {% for item in recommendations %}
+      {% set outer_index = loop.index %}
+      <div class="product-card" data-colors="{{ item.colors.keys() | join(',') | lower }}">
+        
+        {% set first_color_images = item.colors.values() | list | first %}
+        <a href="{{ url_for('main.product_detail', product_name=item.folder) }}">
+          <img src="{{ first_color_images[0] }}" alt="Main Product Image" id="main-{{ outer_index }}" class="main-product-image">
+        </a>
+
+        <div class="color-swatches">
+          {% set colors_list = item.colors.items() | list %}
+          {% for color, images in colors_list[:8] %}
+            <div class="swatch" 
+                 style="background-image: url('{{ images[0] }}');"
+                 onmouseover="document.getElementById('main-{{ outer_index }}').src='{{ images[0] }}'">
+            </div>
+          {% endfor %}
+          {% if colors_list | length > 5 %}
+            <div class="swatch more-swatch">...</div>
+          {% endif %}
+          <div class="favorite-icon" 
+            onclick="toggleFavorite('{{ item.folder }}', this)"
+            data-favorited="{{ 'true' if item.folder in favorite_names else 'false' }}">
+            {% if item.folder in favorite_names %}
+              ❤️
+            {% else %}
+              🤍
+            {% endif %}
+          </div>
+        </div>
+
+        <h3>{{ item.folder }}</h3>
+        <p class="website-name">{{ item.website|capitalize }}</p>
+        <p class="price">{{ item.price }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.swiper-container').forEach(container => {
+      new Swiper(container, {
+        loop: true,
+        navigation: {
+          nextEl: container.querySelector('.swiper-button-next'),
+          prevEl: container.querySelector('.swiper-button-prev'),
+        },
+      });
+    });
+  });
+
+  function toggleFavorite(folderName, element) {
+    const isFavorited = element.getAttribute('data-favorited') === 'true';
+    if (isFavorited) {
+      fetch('/unfavorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_name: folderName }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          element.textContent = '🤍';
+          element.setAttribute('data-favorited', 'false');
+          element.classList.add('pop');
+          setTimeout(() => element.classList.remove('pop'), 400);
+          window.location.href = '/dashboard';
+        }
+      });
+    } else {
+      fetch('/favorite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_name: folderName }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          element.textContent = '❤️';
+          element.setAttribute('data-favorited', 'true');
+          element.classList.add('pop');
+          setTimeout(() => element.classList.remove('pop'), 400);
+          window.location.href = '/dashboard';
+        }
+      });
+    }
+  }
+
+  function applyFilters() {
+  const checkedColors = Array.from(document.querySelectorAll('.sidebar input[type="checkbox"]:checked'))
+                           .map(input => input.value.toLowerCase());
+  const cards = document.querySelectorAll('.product-card');
+
+  cards.forEach(card => {
+    const cardColors = card.getAttribute('data-colors').split(',');
+    const firstColor = cardColors[0]?.toLowerCase();
+
+    const matches = checkedColors.length === 0 || checkedColors.some(color => firstColor.includes(color));
+
+    card.style.display = matches ? 'block' : 'none';
+  });
+}
+</script>
+{% endblock %}

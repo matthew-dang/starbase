@@ -1,0 +1,51 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Review Your Selections</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% include 'navbar.html' %}
+
+    <div class="review-container">
+        <h1>Final Selection</h1>
+        <div id="selectedImagesContainer" class="card-gallery"></div>
+
+        <button class="next-btn" onclick="submitSelections()">Submit</button>
+    </div>
+
+    <script>
+        const images = JSON.parse(localStorage.getItem('selectedImages')) || [];
+        const container = document.getElementById('selectedImagesContainer');
+
+        images.forEach(src => {
+            const card = document.createElement('div');
+            card.className = 'image-card';
+
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = 'Selected Image';
+
+            card.appendChild(img);
+            container.appendChild(card);
+        });
+
+        function submitSelections() {
+            fetch('/submit_final', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ images: images })
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    alert('Submission failed.');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

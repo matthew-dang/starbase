@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Style Quiz</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  {% include 'navbar.html' %}
+  <div class="quiz-container">
+    <h1>What's Your Style?</h1>
+    <p>Select the style that best matches your taste:</p>
+
+    <div class="grid-container">
+      <div class="style-card" onclick="openModal('casual')">
+        <img src="{{ url_for('static', filename='casual/tops1.jpg') }}" alt="Casual">
+        <p>Casual</p>
+      </div>
+    
+      <div class="style-card" onclick="openModal('streetwear')">
+        <img src="{{ url_for('static', filename='streetwear/streetwear1.avif') }}" alt="Streetwear">
+        <p>Streetwear</p>
+      </div>
+    
+      <div class="style-card" onclick="openModal('sports')">
+        <img src="{{ url_for('static', filename='sports/sports1.avif') }}" alt="Sports">
+        <p>Sports / Athleisure</p>
+      </div>
+    
+      <div class="style-card" onclick="openModal('formal')">
+        <img src="{{ url_for('static', filename='formal/formal1.avif') }}" alt="Formal">
+        <p>Formal</p>
+      </div>
+    </div>
+      <div style="text-align:center; margin-top:30px;">
+        <button id="nextButton" class="next-btn" onclick="reviewSelections()">Next ➔</button>
+      </div>
+
+      <div id="styleModal" class="modal">
+        <div class="modal-content-quiz">
+          <div class="modal-header">
+            <h2 id="modalTitle">Select Items</h2>
+            <span class="close" onclick="closeModal()">&times;</span>
+          </div>
+      
+          <div class="tab-header">
+            <button class="tab-button active" id="topsTab" onclick="switchTab('tops')">Tops</button>
+            <button class="tab-button" id="bottomsTab" onclick="switchTab('bottoms')">Bottoms</button>
+          </div>
+      
+          <div class="fit-images" id="fitImages">
+          </div>
+      
+        </div>
+      </div>
+
+  <script src="{{ url_for('static', filename='quiz.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}Starbase{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='product.css') }}">
+</head>
+<body>
+  {% include 'navbar.html' %}
+
+</body>
+</html>
+
+
+<div class="product-wrapper">
+<div class="product-detail-container">
+    <div class="image-gallery">
+      <div id="image-container">
+        {% for image in colors.values()|list|first %}
+          <img src="{{ image }}" alt="Product Image" class="gallery-image">
+        {% endfor %}
+      </div>
+    </div>
+  
+    <div class="product-info">
+        <h2 class="product-name">{{ product_name }}</h2>
+        <p class="price">{{ product_info.price }}</p>
+      
+        <div class="color-name" id="color-name">Color:</div>  <!-- Placeholder -->
+      
+        <div class="color-swatches">
+          {% for color, images in colors.items() %}
+          <div class="swatch"
+              style="background-image: url('{{ images[0] }}');"
+              data-images='{{ images | tojson | safe }}'
+              data-color='{{ color }}'
+              onclick="handleSwatchClick(this)"
+              onmouseover="updateColorName(this)">
+          </div>
+          {% endfor %}
+        </div>
+        <a href="{{ product_info.product_url }}" target="_blank" class="visit-site-btn">Visit Site</a>  
+      </div>
+    </div>
+  </div>
+</div>
+  <script>
+    function handleSwatchClick(element) {
+        const images = JSON.parse(element.getAttribute('data-images'));
+        changeGallery(images);
+        const colorName = element.getAttribute('data-color');
+        document.getElementById('color-name').textContent = `Color: ${colorName}`;  // Update on click too!
+    }
+
+    function updateColorName(element) {
+        const colorName = element.getAttribute('data-color');
+        document.getElementById('color-name').textContent = `Color: ${colorName}`;
+    }
+
+    function changeGallery(images) {
+        const container = document.getElementById('image-container');
+        container.innerHTML = '';
+        images.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.classList.add('gallery-image');
+            container.appendChild(img);
+        });
+    }
+
+    function setDefaultColorName() {
+        const firstSwatch = document.querySelector('.color-swatches .swatch');
+        if (firstSwatch) {
+            const defaultColor = firstSwatch.getAttribute('data-color');
+            document.getElementById('color-name').textContent = `Color: ${defaultColor}`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        setDefaultColorName();
+    });
+  </script>
