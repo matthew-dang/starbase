@@ -1,62 +1,66 @@
-import sys
+import json
 import os
+import sys
 import numpy as np
 from PIL import Image
-
+import requests
+from io import BytesIO
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from embeddings.embedding_utils import get_embedding, save_embeddings
-from config.config import RAW_IMAGES_PATH, RAW_IMAGES_PATH2, RAW_IMAGES_PATH3
+from config.config import MANIFEST_PATH
 
-def select_images_for_model(root):
+def load_manifest(manifest_path):
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+    return manifest
+
+def select_images_from_manifest(manifest):
     all_products = {}
 
-    for product_folder in os.listdir(root):
-        product_path = os.path.join(root, product_folder)
-        if not os.path.isdir(product_path):
-            continue
+    for brand, products in manifest.items():
+        for product, colors in products.items():
+            all_color_images = []
+            for color, image_urls in colors.items():
+                all_color_images.extend(image_urls)
 
-        all_color_images = []
-        for color_folder in os.listdir(product_path):
-            color_path = os.path.join(product_path, color_folder)
-            if not os.path.isdir(color_path):
-                continue
-
-            for img_file in os.listdir(color_path):
-                if img_file.lower().endswith(('jpg', 'jpeg', 'png')):
-                    img_path = os.path.join(color_path, img_file)
-                    all_color_images.append(img_path)
-
-        if all_color_images:
-            all_products[product_folder] = all_color_images
+            if all_color_images:
+                all_products[product] = all_color_images
 
     return all_products
 
 def main():
-    products_1 = select_images_for_model(RAW_IMAGES_PATH)
-    products_2 = select_images_for_model(RAW_IMAGES_PATH2)
-    products_3 = select_images_for_model(RAW_IMAGES_PATH3)
-
-    all_products = {**products_1, **products_2, **products_3}
+    manifest = load_manifest(MANIFEST_PATH)  # or your path if different
+    all_products = select_images_from_manifest(manifest)
 
     final_image_paths = []
     final_embeddings = []
 
-    for product_folder, image_paths in all_products.items():
+    for product_folder, image_urls in all_products.items():
+        
         product_embeddings = []
-        for img_path in image_paths:
-            emb = get_embedding(img_path)
-            product_embeddings.append(emb)
+        for img_url in image_urls:
+            try:
+                response = requests.get(img_url)
+                response.raise_for_status()
+                image = Image.open(BytesIO(response.content)).convert('RGB')
+                emb = get_embedding(image)
+                product_embeddings.append(emb)
+            except Exception as e:
+                print(f"failed to process image {e}")
+                continue
 
         if product_embeddings:
             avg_embedding = np.mean(np.vstack(product_embeddings), axis=0)
-            # Pick a representative image (like first one)
-            rep_img_path = image_paths[0]
+            # Pick the first image URL as the representative
+            rep_img_url = image_urls[0]
 
-            final_image_paths.append(rep_img_path)
+            final_image_paths.append(rep_img_url)  # Save the URL, not a local path
             final_embeddings.append(avg_embedding)
 
     save_embeddings(final_image_paths, final_embeddings)
+
+    print(f" Finished extracting embeddings for {len(final_embeddings)} products.")
 
 if __name__ == "__main__":
     main()

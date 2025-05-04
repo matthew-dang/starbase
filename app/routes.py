@@ -8,7 +8,7 @@ from embeddings.embedding_utils import load_embeddings
 from .models import User, UserPreference, UserFavorite
 from . import db, login_manager
 import json
-from config.config import RAW_IMAGES_PATH, EMBEDDINGS_FILE, RAW_IMAGES_PATH2, RAW_IMAGES_PATH3
+from config.config import RAW_IMAGES_PATH, EMBEDDINGS_FILE, RAW_IMAGES_PATH2, RAW_IMAGES_PATH3, S3_BASE_URL, MANIFEST_PATH
 
 def load_metadata():
     metadata = {}
@@ -23,6 +23,16 @@ def load_metadata():
                         'product_url': row.get('product_url', '#')
                     }
     return metadata
+
+def load_manifest():
+    with open(MANIFEST_PATH, 'r') as f:
+        return json.load(f)
+    
+def find_product_in_manifest(manifest, product_name):
+    for brand, products in manifest.items():
+        if product_name in products:
+            return brand, products[product_name]
+    return None, None
 
 main = Blueprint('main', __name__)
 
@@ -78,143 +88,105 @@ def logout():
 @main.route('/quiz', methods=['GET', 'POST'])
 @login_required
 def quiz():
-    # Handle form submission for quiz answers
-    if request.method == 'POST':
-        # Retrieve answers from the form
-        answer1 = request.form.get('question1')
-        answer2 = request.form.get('question2')
-        answer3 = request.form.get('question3')
-
-        # Process the answers here, save them to the database, etc.
-        # For example, update the user's preferences in the database
-        current_user.preference1 = answer1
-        current_user.preference2 = answer2
-        current_user.preference3 = answer3
-
-        db.session.commit()
-
-        # Redirect the user to a success page or the homepage
-        flash('Quiz completed! Thanks for your answers.', 'success')
-        return redirect(url_for('main.home'))
-
     return render_template('quiz.html')
 
 @main.route('/dashboard')
 @login_required
 def dashboard():
+    # Load manifest.json (all your S3 images)
+    manifest = load_manifest()
     metadata = load_metadata()
 
+    # Load embeddings (already trained on S3 images paths)
     embeddings_data = load_embeddings(EMBEDDINGS_FILE)
     image_paths = embeddings_data['paths']
     embeddings = embeddings_data['embeddings']
 
+    # Load user preference images
     preference = UserPreference.query.filter_by(user_id=current_user.id).first()
-    selected_images_web = json.loads(preference.selected_images)  # List of 6 images
+    selected_images_web = json.loads(preference.selected_images) if preference else []
 
     selected_images = [os.path.join(current_app.root_path, img.lstrip('/')) for img in selected_images_web]
 
+
+    # selected_images_web are already URLs from your style quiz
+    query_images = selected_images.copy()
+
+    # Load favorites
     favorites = UserFavorite.query.filter_by(user_id=current_user.id).all()
     favorite_names = [fav.product_name for fav in favorites]
 
-    favorite_image_paths = []
-    for name in favorite_names:
-        folder_path = os.path.join(RAW_IMAGES_PATH, name)
-        if not os.path.exists(folder_path):
-            folder_path = os.path.join(RAW_IMAGES_PATH2, name)
-        if os.path.exists(folder_path):
-            for color_folder in os.listdir(folder_path):
-                color_path = os.path.join(folder_path, color_folder)
-                if os.path.isdir(color_path):
-                    images = os.listdir(color_path)
-                    if images:
-                        favorite_image_paths.append(os.path.join(color_path, images[0]))
+    # Match favorite products by product_name
+    for fav_name in favorite_names:
+        found = False
+        for brand, products in manifest.items():
+            if fav_name in products:
+                # Pick the first image from any color
+                for color_images in products[fav_name].values():
+                    if color_images:
+                        query_images.append(color_images[0])  # Add first image of favorite
+                        found = True
                         break
+            if found:
+                break
 
-    query_images = selected_images + favorite_image_paths
-
-    print(f"Favorite names: {favorite_names}")
-    print(f"Favorite image paths: {favorite_image_paths}")
-    print(f"Query images: {query_images}")
-
-    # Generate recommendations for each query image
+    # Generate recommendations
     all_recommendations = set()
     for query_image in query_images:
         recommended_folders = generate_recommendations(query_image, image_paths, embeddings)
         all_recommendations.update(recommended_folders)
 
-    # Collect images from recommended folders
+    # Build dashboard recommendation cards
     recommendations = []
 
-    for folder in all_recommendations:
-        website_name = os.path.basename(os.path.dirname(folder))
-        # if not folder.startswith(RAW_IMAGES_PATH) and not folder.startswith(RAW_IMAGES_PATH2):
-        #     continue
-        # Gather color folders and images
-        color_folders = [os.path.join(folder, subfolder) for subfolder in os.listdir(folder)
-                        if os.path.isdir(os.path.join(folder, subfolder))]
-            
-        colors = {}
-        for color_folder in color_folders:
-            color_name = os.path.basename(color_folder)
-            images = [
-                url_for('static', filename=os.path.relpath(os.path.join(color_folder, img), os.path.join(current_app.root_path, 'static')).replace('\\', '/'))
-                for img in os.listdir(color_folder) if img.lower().endswith(('png', 'jpg', 'jpeg', 'avif'))
-            ]
-            colors[color_name] = images
+    for brand, product_name in all_recommendations: 
+        if brand in manifest and product_name in manifest[brand]:
+            color_images = manifest[brand][product_name]
 
-        if colors:
             first_image = None
-            for image_list in colors.values():
-                if image_list:  # Check if the list is not empty
-                    first_image = image_list[0]
+            for images in color_images.values():
+                if images:
+                    first_image = images[0]
                     break
 
-            if first_image is None:
-                # Handle the case where no images exist (e.g., skip this product)
+            if not first_image:
                 continue
-            product_info = metadata.get(os.path.basename(folder), {'price': 'N/A', 'product_url': '#'})
+            normalized_product_name = product_name.strip()
+            product_info = metadata.get(normalized_product_name, {'price': 'N/A', 'product_url': '#'})
+
             recommendations.append({
-                'folder': os.path.basename(folder),
-                'website': website_name,
-                'colors': colors,
+                'folder': product_name,
+                'website': brand,
+                'colors': color_images,
                 'main_image': first_image,
                 'price': product_info['price']
             })
-    print(f"Total recommendations generated: {len(all_recommendations)} folders")
 
-    favorites = UserFavorite.query.filter_by(user_id=current_user.id).all()
-    favorite_names = [fav.product_name for fav in favorites]
     return render_template('dashboard.html', recommendations=recommendations, favorite_names=favorite_names)
 
 @main.route('/product/<product_name>')
 def product_detail(product_name):
-    # Locate product folder
-    product_folder = None
-    for path in [RAW_IMAGES_PATH, RAW_IMAGES_PATH2, RAW_IMAGES_PATH3]:
-        potential_folder = os.path.join(path, product_name)
-        if os.path.exists(potential_folder):
-            product_folder = potential_folder
-            break
+    manifest = load_manifest()
+    metadata = load_metadata()
 
-    if not product_folder:
+    product_brand, product_data = find_product_in_manifest(manifest, product_name)
+    if not product_data:
         return "Product not found", 404
-    color_folders = [os.path.join(product_folder, subfolder) for subfolder in os.listdir(product_folder)
-                     if os.path.isdir(os.path.join(product_folder, subfolder))]
 
     colors = {}
-    for color_folder in color_folders:
-        color_name = os.path.basename(color_folder)
-        images = [
-            url_for('static', filename=os.path.relpath(os.path.join(color_folder, img), os.path.join(current_app.root_path, 'static')).replace('\\', '/'))
-            for img in os.listdir(color_folder) if img.lower().endswith(('png', 'jpg', 'jpeg', 'avif'))
-        ]
+    for color_name, images in product_data.items():
         colors[color_name] = images
 
-    # Optionally load metadata like product_url, price
-    metadata = load_metadata()
-    product_info = metadata.get(product_name, {'price': 'N/A', 'product_url': '#'})
+    normalized_product_name = product_name.strip()
+    product_info = next((info for title, info in metadata.items() if title.lower().strip() == normalized_product_name.lower()), None)
+    if not product_info:
+        product_info = {'price': 'N/A', 'product_url': '#'}
 
-    return render_template('product_detail.html', product_name=product_name, colors=colors, product_info=product_info)
+    return render_template('product_detail.html', 
+                           product_name=product_name, 
+                           colors=colors, 
+                           product_info=product_info,
+                           brand=product_brand)
 
 def matches_style(text, keywords):
     return any(keyword in text.lower() for keyword in keywords)
@@ -260,47 +232,43 @@ def unfavorite():
 @main.route('/favorites')
 @login_required
 def favorites_page():
-    # Load user's favorites
+    manifest = load_manifest()
+    metadata = load_metadata()
+
     favorites = UserFavorite.query.filter_by(user_id=current_user.id).all()
     favorite_names = [fav.product_name for fav in favorites]
 
-    # Gather images for each favorite product
     favorite_items = []
-    for name in favorite_names:
-        product_folder = None
-        for path in [RAW_IMAGES_PATH, RAW_IMAGES_PATH2, RAW_IMAGES_PATH3]:
-            potential_folder = os.path.join(path, name)
-            if os.path.exists(potential_folder):
-                product_folder = potential_folder
+
+    for product_name in favorite_names:
+        product_brand, product_data = find_product_in_manifest(manifest, product_name)
+        if not product_data:
+            continue
+
+        colors = {color: images for color, images in product_data.items()}
+
+        first_image = None
+        for image_list in colors.values():
+            if image_list:
+                first_image = image_list[0]
                 break
 
-        if not product_folder:
-            continue  # Skip if folder doesn't exist
+        if not first_image:
+            continue
 
-        color_folders = [os.path.join(product_folder, subfolder) for subfolder in os.listdir(product_folder)
-                         if os.path.isdir(os.path.join(product_folder, subfolder))]
+        normalized_product_name = product_name.strip()
+        product_info = next((info for title, info in metadata.items() if title.lower().strip() == normalized_product_name.lower()), None)
+        if not product_info:
+            product_info = {'price': 'N/A', 'product_url': '#'}
 
-        colors = {}
-        for color_folder in color_folders:
-            color_name = os.path.basename(color_folder)
-            images = [
-                url_for('static', filename=os.path.relpath(os.path.join(color_folder, img), os.path.join(current_app.root_path, 'static')).replace('\\', '/'))
-                for img in os.listdir(color_folder) if img.lower().endswith(('png', 'jpg', 'jpeg', 'avif'))
-            ]
-            colors[color_name] = images
-
-        if colors:
-            first_image = None
-            for image_list in colors.values():
-                if image_list:
-                    first_image = image_list[0]
-                    break
-
-            favorite_items.append({
-                'folder': name,
-                'colors': colors,
-                'main_image': first_image
-            })
+        favorite_items.append({
+            'folder': product_name,
+            'website': product_brand,
+            'colors': colors,
+            'main_image': first_image,
+            'price': product_info['price'],
+            'product_url': product_info['product_url']
+        })
 
     return render_template('favorites.html', favorites=favorite_items)
 

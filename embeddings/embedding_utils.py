@@ -18,8 +18,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = EmbeddingModel()
 model.eval()
 
-def get_embedding(image_path):
-    img = Image.open(image_path).convert('RGB')
+def get_embedding(image_or_path):
+    if isinstance(image_or_path, str):  # it's a file path
+        img = Image.open(image_or_path).convert('RGB')
+    else:  # assume it's already a PIL image
+        img = image_or_path
+
     img_tensor = preprocess(img).unsqueeze(0).to(device)  # Add batch dimension
     with torch.no_grad():
         embedding = model(img_tensor)
