@@ -1,18 +1,23 @@
-/app/static/casual/
-/app/static/streetwear/
-/app/static/sports/
-/app/static/formal/
-/app/static/Abercrombie/
-/app/static/H&M/
-/app/static/Zara/
-/app/static/tutorials/
+# Ignore everything in app/static by default
+
+
+# Allow quiz folders and tutorial videos
+!/app/static/casual/
+!/app/static/streetwear/
+!/app/static/sports/
+!/app/static/formal/
+!/app/static/tutorials/
+
+# Ignore brand folders but allow their metadata.csv
+/app/static/Abercrombie/*
+/app/static/H&M/*
+/app/static/Zara/*
+
+# Allow metadata.csv in brand folders
+!/app/static/Abercrombie/metadata.csv
+!/app/static/H&M/metadata.csv
+!/app/static/Zara/metadata.csv
+
+# Ignore huge raw data folders
 /data/
 /style_env/
-**/*.jpg
-**/*.jpeg
-**/*.png
-**/*.avif
-**/*.webp
-**/*.gif
-**/*.bmp
-**/*.tiff

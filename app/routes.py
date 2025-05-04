@@ -8,7 +8,7 @@ from embeddings.embedding_utils import load_embeddings
 from .models import User, UserPreference, UserFavorite
 from . import db, login_manager
 import json
-from config.config import RAW_IMAGES_PATH, EMBEDDINGS_FILE, RAW_IMAGES_PATH2, RAW_IMAGES_PATH3, S3_BASE_URL, MANIFEST_PATH
+from config.config import RAW_IMAGES_PATH, EMBEDDINGS_FILE, RAW_IMAGES_PATH2, RAW_IMAGES_PATH3, MANIFEST_PATH
 
 def load_metadata():
     metadata = {}
