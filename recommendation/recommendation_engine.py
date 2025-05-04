@@ -5,16 +5,10 @@ from io import BytesIO
 import os
 from embeddings.embedding_utils import get_embedding
 from embeddings.visual_search import find_similar_items
-import clip
-import torch
 from PIL import Image
 from config.config import MANIFEST_PATH
 from flask import current_app
 from urllib.parse import unquote, quote
-
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-clip_model, preprocess_clip = clip.load("ViT-B/32", device=device)
 
 with open(MANIFEST_PATH, 'r') as f:
     manifest = json.load(f)
