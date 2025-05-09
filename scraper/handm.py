@@ -43,12 +43,11 @@ def scrape_hm_images():
                 product_url = product.get_attribute("href")
                 product_title = product.get_attribute("title")
 
-                # Extract product ID before interacting with the element
                 product_id_match = re.search(r'productpage\.(\d+)', product_url)
                 if product_id_match:
                     product_id = product_id_match.group(1)[:-3]  # Remove last 3 digits
                 else:
-                    continue  # Skip if no product ID found
+                    continue 
 
                 if product_id in seen_products:
                     print(f"Skipping duplicate product ID: {product_id}")
@@ -56,7 +55,6 @@ def scrape_hm_images():
 
                 seen_products.add(product_id)
 
-                # NOW check if the element is displayed
                 if not product.is_displayed():
                     continue
                 
@@ -96,10 +94,8 @@ def scrape_hm_images():
                         continue
                     processed_colors.add(color_name)
 
-                    # Click the swatch to update the main gallery
                     driver.execute_script("arguments[0].click();", color_element)
 
-                    # Scrape the updated main gallery images
                     updated_images = driver.find_elements(By.CSS_SELECTOR, 'div[data-testid="next-image"]')
                     for img in updated_images:
                         driver.execute_script("arguments[0].scrollIntoView(true);", img)
@@ -111,12 +107,10 @@ def scrape_hm_images():
                             if not src or src.startswith("data:"):
                                 continue
 
-                            # Prepare color folder
                             safe_color_name = re.sub(r'[\\/*?:"<>|/]', "_", color_name)
                             color_folder = os.path.join(product_folder, safe_color_name)
                             os.makedirs(color_folder, exist_ok=True)
 
-                            # Download and track the image
                             download_image(src, color_folder, min_width=200, min_height=200)
                             img_urls.append(src)
                             print(f"Downloaded {src} to {color_folder}")

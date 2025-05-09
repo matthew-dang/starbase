@@ -30,7 +30,7 @@ def select_images_from_manifest(manifest):
     return all_products
 
 def main():
-    manifest = load_manifest(MANIFEST_PATH)  # or your path if different
+    manifest = load_manifest(MANIFEST_PATH)
     all_products = select_images_from_manifest(manifest)
 
     final_image_paths = []
@@ -52,10 +52,9 @@ def main():
 
         if product_embeddings:
             avg_embedding = np.mean(np.vstack(product_embeddings), axis=0)
-            # Pick the first image URL as the representative
             rep_img_url = image_urls[0]
 
-            final_image_paths.append(rep_img_url)  # Save the URL, not a local path
+            final_image_paths.append(rep_img_url)
             final_embeddings.append(avg_embedding)
 
     save_embeddings(final_image_paths, final_embeddings)

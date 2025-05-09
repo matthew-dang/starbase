@@ -62,19 +62,16 @@ def login():
 def register():
     email = request.form['email'].strip().lower()
 
-    # 1) Duplicate‑email check
     if User.query.filter_by(email=email).first():
         flash('That email is already registered. Please log in.', 'danger')
         return render_template('home.html', open_modal='register')
 
-    # 2) Create the new user
     password = request.form['password']
-    hashed_pw = generate_password_hash(password)  # defaults to pbkdf2:sha256
+    hashed_pw = generate_password_hash(password)
     new_user = User(email=email, password=hashed_pw)
     db.session.add(new_user)
     db.session.commit()
 
-    # 3) Log them in + redirect (no more modal)
     login_user(new_user)
     flash('Successfully registered and logged in!', 'success')
     return redirect(url_for('main.quiz'))
@@ -93,50 +90,41 @@ def quiz():
 @main.route('/dashboard')
 @login_required
 def dashboard():
-    # Load manifest.json (all your S3 images)
     manifest = load_manifest()
     metadata = load_metadata()
 
-    # Load embeddings (already trained on S3 images paths)
     embeddings_data = load_embeddings(EMBEDDINGS_FILE)
     image_paths = embeddings_data['paths']
     embeddings = embeddings_data['embeddings']
 
-    # Load user preference images
     preference = UserPreference.query.filter_by(user_id=current_user.id).first()
     selected_images_web = json.loads(preference.selected_images) if preference else []
 
     selected_images = [os.path.join(current_app.root_path, img.lstrip('/')) for img in selected_images_web]
 
 
-    # selected_images_web are already URLs from your style quiz
     query_images = selected_images.copy()
 
-    # Load favorites
     favorites = UserFavorite.query.filter_by(user_id=current_user.id).all()
     favorite_names = [fav.product_name for fav in favorites]
 
-    # Match favorite products by product_name
     for fav_name in favorite_names:
         found = False
         for brand, products in manifest.items():
             if fav_name in products:
-                # Pick the first image from any color
                 for color_images in products[fav_name].values():
                     if color_images:
-                        query_images.append(color_images[0])  # Add first image of favorite
+                        query_images.append(color_images[0])
                         found = True
                         break
             if found:
                 break
 
-    # Generate recommendations
     all_recommendations = set()
     for query_image in query_images:
         recommended_folders = generate_recommendations(query_image, image_paths, embeddings)
         all_recommendations.update(recommended_folders)
 
-    # Build dashboard recommendation cards
     recommendations = []
 
     for brand, product_name in all_recommendations: 
@@ -200,12 +188,10 @@ def favorite():
     if not product_name:
         return jsonify({'status': 'error', 'message': 'No product name provided'}), 400
 
-    # Check if already favorited
     existing_favorite = UserFavorite.query.filter_by(user_id=current_user.id, product_name=product_name).first()
     if existing_favorite:
-        return jsonify({'status': 'success'})  # Already favorited, do nothing
+        return jsonify({'status': 'success'})
 
-    # Save new favorite
     new_favorite = UserFavorite(user_id=current_user.id, product_name=product_name)
     db.session.add(new_favorite)
     db.session.commit()
@@ -221,7 +207,6 @@ def unfavorite():
     if not product_name:
         return jsonify({'status': 'error', 'message': 'No product name provided'}), 400
 
-    # Remove from UserFavorite table
     favorite = UserFavorite.query.filter_by(user_id=current_user.id, product_name=product_name).first()
     if favorite:
         db.session.delete(favorite)
@@ -286,7 +271,6 @@ def submit_final():
     if not images:
         return jsonify({'status': 'error', 'message': 'No images provided'}), 400
 
-    # Save final selected images under selected_images
     preference = UserPreference.query.filter_by(user_id=current_user.id).first()
     if preference:
         preference.selected_images = json.dumps(images)

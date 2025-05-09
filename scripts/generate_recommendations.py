@@ -9,18 +9,14 @@ from config.config import EMBEDDINGS_FILE
 
 
 def main():
-    # Load embeddings
     embeddings_data = load_embeddings(EMBEDDINGS_FILE)
     image_paths = embeddings_data['paths']
     embeddings = embeddings_data['embeddings']
     
-    # Get user query
     query_image_path = get_user_query()
     
-    # Generate recommendations
     recommendations = generate_recommendations(query_image_path, image_paths, embeddings)
     
-    # Display recommendations
     display_recommendations(recommendations)
     
 if __name__ == "__main__":

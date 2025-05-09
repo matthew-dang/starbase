@@ -14,7 +14,6 @@ with open(MANIFEST_PATH, 'r') as f:
     manifest = json.load(f)
 
 def find_product_from_url(image_url):
-    # Try quoting it
     encoded_url = quote(image_url, safe=':/')
 
     for brand, products in manifest.items():
@@ -42,7 +41,7 @@ def generate_recommendations(query_image_path_or_url, image_urls, embeddings, n_
     seen = set()
 
     for idx in similar_indices: 
-        img_url = image_urls[idx]  # Now image_urls are full S3 URLs
+        img_url = image_urls[idx]
 
 
         brand, product = find_product_from_url(img_url)

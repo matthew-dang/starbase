@@ -5,7 +5,6 @@ from PIL import Image
 from torchvision import transforms
 from embeddings.embedding_model import EmbeddingModel
 
-# Define image transformations (resize, normalize)
 preprocess = transforms.Compose([
     transforms.Resize(256),
     transforms.CenterCrop(224),
@@ -14,17 +13,16 @@ preprocess = transforms.Compose([
 ])
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Load the pretrained ResNet50 model
 model = EmbeddingModel()
 model.eval()
 
 def get_embedding(image_or_path):
-    if isinstance(image_or_path, str):  # it's a file path
+    if isinstance(image_or_path, str):
         img = Image.open(image_or_path).convert('RGB')
-    else:  # assume it's already a PIL image
+    else:
         img = image_or_path
 
-    img_tensor = preprocess(img).unsqueeze(0).to(device)  # Add batch dimension
+    img_tensor = preprocess(img).unsqueeze(0).to(device)
     with torch.no_grad():
         embedding = model(img_tensor)
     return embedding.squeeze().cpu().numpy()

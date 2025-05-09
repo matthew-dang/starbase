@@ -51,7 +51,6 @@ def scrape_zara():
             )
             color_element = driver.find_element(By.CSS_SELECTOR, 'div.product-detail-view__main-info')
 
-            # find title and price
 
             product_title_tag = color_element.find_element(By.CSS_SELECTOR, 'h1.product-detail-info__header-name')
             product_title = product_title_tag.text
@@ -67,7 +66,6 @@ def scrape_zara():
             product_folder = os.path.join(RAW_IMAGES_PATH2, safe_title)
             os.makedirs(product_folder, exist_ok=True)
 
-            # find color
             img_urls = []
             color_map = {}
             color_elements = driver.find_elements(By.CSS_SELECTOR, 'button[data-qa-action="select-color"]')
@@ -94,7 +92,6 @@ def scrape_zara():
             for color in color_elements:
                 outer_html = color.get_attribute('outerHTML')
 
-                # Regex to find text inside <span class="screen-reader-text">...</span>
                 match = re.search(r'<span class="screen-reader-text">(.*?)</span>', outer_html)
                 if match:
                     color_name = match.group(1).strip()
@@ -123,7 +120,6 @@ def scrape_zara():
                         color_folder = os.path.join(product_folder, safe_color_name)
                         os.makedirs(color_folder, exist_ok=True)
 
-                        # Download and track the image
                         download_image(src, color_folder, min_width=200, min_height=200)
                         img_urls.append(src)
                         print(f"Downloaded {src} to {color_folder}")

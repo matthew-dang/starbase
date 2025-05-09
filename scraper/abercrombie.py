@@ -109,16 +109,13 @@ def scrape_abercrombie():
                 img_urls = []
                 processed_colors = set()
                 for color_name, color_element in color_map.items():
-                    # Skip duplicates if needed
                     if color_name in processed_colors:
                         continue
                     processed_colors.add(color_name)
 
-                    # Click the swatch to update the main gallery
                     driver.execute_script("arguments[0].click();", color_element)
                     time.sleep(1.5)
 
-                    # Scrape the updated main gallery images
                     updated_images = driver.find_elements(By.CSS_SELECTOR, 'div.product-page-gallery-mfe-container')
                     for img in updated_images:
                         if img.is_displayed():
@@ -127,12 +124,10 @@ def scrape_abercrombie():
 
                             if not src or src.startswith("data:"):
                                 continue
-                            # Prepare color folder
                             safe_color_name = re.sub(r'[\\/*?:"<>|/]', "_", color_name)
                             color_folder = os.path.join(product_folder, safe_color_name)
                             os.makedirs(color_folder, exist_ok=True)
 
-                            # Download and track the image
                             download_image(src, color_folder, min_width=200, min_height=200)
                             img_urls.append(src)
                             print(f"Downloaded {src} to {color_folder}")
